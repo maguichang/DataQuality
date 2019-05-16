@@ -123,7 +123,6 @@ def recordCheckNull(chooseFlag,database,table,inputValue):
 
 # 访问示例：
 # 127.0.0.1:5000/completeness/recordCheckNull/ic/datagovernance/fakedata/4000000
-# 127.0.0.1:5000/completeness/recordCheckNull/ic/datagovernance/testdata/400000
 # 127.0.0.1:5000/completeness/recordCheckNull/tc/datagovernance/testdata/datagovernance,t1
 
 @completeness.route('/checkMetadataAndComparabeData/<database>/<table>/<checkField>',methods = ['GET','POST'])
