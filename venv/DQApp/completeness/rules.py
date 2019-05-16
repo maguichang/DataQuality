@@ -137,8 +137,6 @@ def checkMetadataAndComparabeData(database,table,checkField):
     # 从连接池获取数据库连接
     db_pool = dbConnect.get_db_pool(False)
     conn = db_pool.connection()
-    # 读取数据库开始时间
-    start_read = time.clock()
 
     db = database
     tb = table
@@ -147,13 +145,8 @@ def checkMetadataAndComparabeData(database,table,checkField):
     sql = "DESC "+db+"."+tb
     dfData = pd.read_sql(sql, conn)
 
-    end_read = time.clock()
-    print("元数据充分性校验读取数据库时间: %s Seconds" % (end_read - start_read))
-
     metaField = list(dfData['Field'])
     if checkField in metaField:
-        end_exec = time.clock()
-        print("元数据充分性性校验总用时: %s Seconds" % (end_exec - start_read))
         return "chenckField in metaData,and checkeField is "+checkField
     else:
         return "chenckField not in metaData"
