@@ -44,8 +44,6 @@ def checkType(database,table,field):
     # 从连接池获取数据库连接
     db_pool = dbConnect.get_db_pool(False)
     conn = db_pool.connection()
-    # 读取数据库开始时间
-    start_read = time.clock()
 
     db = database
     tb = table
@@ -53,17 +51,11 @@ def checkType(database,table,field):
     sql = "DESC "+db+"."+tb
     dfData = pd.read_sql(sql, conn)
 
-    end_read = time.clock()
-    print("列类型校验读取数据库时间: %s Seconds" % (end_read - start_read))
-
     columnType = dfData[['Field','Type']]
     columnType.set_index(['Field'], inplace=True)
     # 获取单个或多个字段的数据类型
     res = columnType.loc[fd.split(',')]
     res = res.to_dict()
-
-    end_exec = time.clock()
-    print("列类型校验总用时: %s Seconds" % (end_exec - start_read))
     # 返回数据类型，长度，精度
     return jsonify(res)
 
@@ -149,17 +141,12 @@ def checkPrecision(database,table,field):
     # 从连接池获取数据库连接
     db_pool = dbConnect.get_db_pool(False)
     conn = db_pool.connection()
-    # 读取数据库开始时间
-    start_read = time.clock()
 
     db = database
     tb = table
     fd = field
     sql = "SHOW FULL COLUMNS FROM "+db+"."+tb
     columnInfo = pd.read_sql(sql, conn)
-
-    end_read = time.clock()
-    print("精度校验读取数据库时间: %s Seconds" % (end_read - start_read))
 
     # 获取校验列的精度信息，计量单位，小数位数
     precisionInfo = columnInfo[['Field','Type','Comment']]
@@ -195,7 +182,6 @@ def checkRepeat(database,table,field):
     # 读取数据库开始时间
     start_read = time.clock()
 
-
     db = database
     tb = table
     fd = field
@@ -203,7 +189,6 @@ def checkRepeat(database,table,field):
     dfData = pd.read_sql(sql, conn)  # 一次性读取，测试性能时可分批读取
     end_read = time.clock()
     print("重复率校验读取数据库时间: %s Seconds" % (end_read - start_read))
-
 
     checkData = dfData.duplicated().value_counts()
     # 重复数据记录数
