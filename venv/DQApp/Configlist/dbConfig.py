@@ -17,10 +17,10 @@ class Config(object):
     # DATABASE_USER = 'admin'
     # DATABASE_PASSWORD = 'admin'
     # mysql setup
-    MYSQL_URI = '10.0.8.201'
+    MYSQL_URI = 'xxx'
     MYSQL_PORT = 3306
     MYSQL_USER = 'root'
-    MYSQL_PWD = 'Mgc5320'
+    MYSQL_PWD = 'xxx'
     MYSQL_DB = 'test'
     MYSQL_CHARSET = 'utf8'
     #mail setup
