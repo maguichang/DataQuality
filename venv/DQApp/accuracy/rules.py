@@ -126,7 +126,7 @@ def checkValueRange(rangeType,minValue,maxValue,database,table,field):
     print("列类型校验总用时: %s Seconds" % (end_exec - start_read))
     return jsonify({"accordValueRangeRatio": accordValueRangeNum / recordCount})
 
-# 访问示例：127.0.0.1:5000/accuracy/checkValueRange/charRange/beijing/shanghai/datagovernance/testdata/address
+# 访问示例：
 # 127.0.0.1:5000/accuracy/checkValueRange/valueRange/50/80/datagovernance/fakedata/age
 
 @accuracy.route('/checkPrecision/<database>/<table>/<field>',methods=['GET','POST'])
