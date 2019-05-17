@@ -125,7 +125,7 @@ def recordCheckNull(chooseFlag,database,table,inputValue):
 # 127.0.0.1:5000/completeness/recordCheckNull/ic/datagovernance/fakedata/4000000
 # 127.0.0.1:5000/completeness/recordCheckNull/tc/datagovernance/testdata/datagovernance,t1
 
-@completeness.route('/checkMetadataAndComparabeData/<database>/<table>/<checkField>',methods = ['GET','POST'])
+@completeness.route('/checkFieldInTable/<database>/<table>/<checkField>',methods = ['GET','POST'])
 def checkMetadataAndComparabeData(database,table,checkField):
     """
     元数据与参考数据的充分性

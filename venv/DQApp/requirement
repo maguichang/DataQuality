@@ -1,0 +1,6 @@
+flask
+pymysql
+gevent
+DBUtils
+numpy
+pandas
