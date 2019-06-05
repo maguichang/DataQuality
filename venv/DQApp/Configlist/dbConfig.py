@@ -17,10 +17,10 @@ class Config(object):
     # DATABASE_USER = 'admin'
     # DATABASE_PASSWORD = 'admin'
     # mysql setup
-    MYSQL_URI = 'xxx'
+    MYSQL_URI = '10.0.8.206'
     MYSQL_PORT = 3306
     MYSQL_USER = 'root'
-    MYSQL_PWD = 'xxx'
+    MYSQL_PWD = 'Mgc5320'
     MYSQL_DB = 'test'
     MYSQL_CHARSET = 'utf8'
     #mail setup
@@ -34,7 +34,7 @@ class Config(object):
 
 
 class ProductionConfig(Config):
-    DATABASE_URI = '10.0.7.37'
+    DATABASE_URI = 'xx.xx.xx.xx'
     DATABASE_NAME = 'mgc'
 
 

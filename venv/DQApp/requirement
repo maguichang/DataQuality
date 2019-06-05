@@ -4,3 +4,4 @@ gevent
 DBUtils
 numpy
 pandas
+validators

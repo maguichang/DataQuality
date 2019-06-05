@@ -14,7 +14,7 @@ import time
 import numpy as np
 import pandas as pd
 from flask import Blueprint,jsonify
-from DQApp.dbPool import dbConnect
+from dbPool import dbConnect
 
 timeliness=Blueprint('timeliness',__name__)
 # 从连接池获取数据库连接

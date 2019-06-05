@@ -12,7 +12,7 @@ import pymysql
 import numpy as np
 import pandas as pd
 from flask import Blueprint,jsonify,request
-from DQApp.dbPool import dbConnect
+from dbPool import dbConnect
 
 uniqueness=Blueprint('uniqueness',__name__)
 

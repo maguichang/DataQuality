@@ -1,120 +1,168 @@
 # -*- coding:utf-8 -*-
-# @Time 2019/5/7 14:38
+# @Time 2019/5/10 15:39
 # @Author Ma Guichang
-
 """
-status: developing
-一致性：
-1.相同数据的一致性(developing)
-    同一数据在不同位置存储或被不同应用或用户使用时数据的一致性，以及不同时间段的一致性即双表count校验
-
-2.关联数据的一致性(finished)
-    具有关联关系的字段的数据的一致性（父子表，主外键）.
-        2.1 父/子表参考的一致性
-        确定父表/子表之间的参考完整性，以找出无父记录的子记录的值
-        2.2 子/父表参考的一致性
-        确定父表/子表之间的参考完整性，以找出无子记录的父记录的值
-3. 一个字段默认值使用的一致性
-    评估列属性和数据在可被赋予默认值的每个字段的默认值
-4. 跨表的默认值使用的一致性
-    评估列属性和数据在相同数据类型的字段默认值上的一致性
+规范性
+1.数据格式的合规性(finished)
+        a) 类型
+        b) 长度（string类型的数据长度，与期望值进行比较）
+2.单字段主键校验
+    检验列，判断该字段的是否为主键
+3.联合主键校验
+    检验列，判断组合字段是否为联合主键
+4.格式校验
+     a) 输入列名，检验该列的数据的格式是否符合要求（以邮箱、手机号、身份证格式为例）
+     b) 数据格式:邮箱，身份证，手机号
 """
+
 import pymysql
 import time
 import numpy as np
 import pandas as pd
+# 校验值域，长度，邮件
+from validators import between,length,email
 from flask import Blueprint,jsonify,request
-from DQApp.dbPool import dbConnect
+from dbPool import dbConnect
+# from DQApp.normalization.phoneAndCardsCheck import *
+from conformity.phoneAndCardsCheck import *
 
 conformity=Blueprint('conformity',__name__)
-# 从连接池获取数据库连接
-db_pool = dbConnect.get_db_pool(False)
-conn = db_pool.connection()
 
 
-@conformity.route('/checkDoubleCount/<srcdb>/<srctb>/<srcfd>/<desdb>/<destb>/<desfd>',methods = ['GET','POST'])
-def checkDoubleCount(srcdb,srctb,srcfd,desdb,destb,desfd):
+@conformity.route('/checkType/<database>/<table>/<path:field>',methods=['GET','POST'])
+def checkType(database,table,field):
     """
-    双表count校验
-    :param srcdb: 源数据库
-    :param srctb: 源数据表
-    :param srcfd: 源检验列
-    :param desdb: 目标数据库
-    :param destb: 目标数据表
-    :param desfd: 目标检验例
-    :return:
-    """
-    # 从连接池获取数据库连接
-    db_pool = dbConnect.get_db_pool(False)
-    conn = db_pool.connection()
-    sql_tb1 = "SELECT count("+srcfd+") as f1 FROM "+srcdb+"."+srctb
-    dfDataTb1 = pd.read_sql(sql_tb1, conn)
-    print(dfDataTb1["f1"][0])# numpy.int64数据类型
-    sql_tb2 = "SELECT count("+desfd+") as f2 FROM "+desdb+"."+destb
-    dfDataTb2 = pd.read_sql(sql_tb2, conn)
-    print(dfDataTb2["f2"][0])
-
-    if dfDataTb1["f1"][0] == dfDataTb2["f2"][0]:
-        res = 'double count check success'
-    else:
-        res = 'double count check faild'
-    return res
-
-
-@conformity.route('/checkMasterSlaveTable/<masterDatabase>/<masterTable>/<masterField>/<slaveDatabase>/<slaveTable>/<slaveField>',methods = ['GET','POST'])
-def checkMasterSlaveTable(masterDatabase,masterTable,masterField,slaveDatabase,slaveTable,slaveField):
-    """
-    关联数据的一致性
-    :param masterDatabase: 父表数据库
-    :param masterTable: 父表数据表
-    :param masterField: 父表校验列
-    :param slaveDatabase: 子表数据库
-    :param slaveTable: 子表数据表
-    :param slaveField: 子表校验列
-    :return:
-    """
-    # 从连接池获取数据库连接
-    db_pool = dbConnect.get_db_pool(False)
-    conn = db_pool.connection()
-    
-    mdb = masterDatabase
-    mtb = masterTable
-    mfd = masterField
-    sdb = slaveDatabase
-    stb = slaveTable
-    sfd = slaveField
-
-    sql_m = " SELECT " + mfd + " FROM " + mdb + "." + mtb
-    mdfData = pd.read_sql(sql_m, conn)
-
-    sql_s = " SELECT " + sfd + " FROM " + sdb + "." + stb
-    sdfData = pd.read_sql(sql_s, conn)
-
-    #此处采用循环实现，效率较低，待优化
-    # 无父记录的子记录的值
-    num = 0
-    for i in list(sdfData[sfd]):
-        if i not in list(mdfData[mfd]):
-            num = num + 1
-
-    # 无子记录的父记录的值
-    num2 = 0
-    for i in list(mdfData[mfd]):
-        if i not in list(sdfData[sfd]):
-            num2 = num2 + 1
-
-    return  jsonify({"无父记录的子记录的值":num,"无子记录的父记录的值":num2})
-
-# 访问示例:127.0.0.1:5000/conformity/checkMasterSlaveTable/datagovernance/class/cname/datagovernance/student2/cid
-
-@conformity.route('/checkSingleDefaultValue/<database>/<table>/<field>',methods = ['GET','POST'])
-def checkSingleDefaultValue(database,table,field):
-    """
-    一个字段默认值使用的一致性
+    列类型校验
     :param database: 校验数据库
     :param table: 校验数据表
     :param field: 校验列
+    :return: 校验列在mysql中的存储类型
+    """
+    # 从连接池获取数据库连接
+    db_pool = dbConnect.get_db_pool(False)
+    conn = db_pool.connection()
+    db = database
+    tb = table
+    fd = field
+    sql = "DESC "+db+"."+tb
+    dfData = pd.read_sql(sql, conn)
+    columnType = dfData[['Field','Type']]
+    columnType.set_index(['Field'], inplace=True)
+    # 获取单个或多个字段的数据类型
+    res = columnType.loc[fd.split(',')]
+    res = res.to_dict()
+    # 返回数据类型，长度，精度
+    return jsonify(res)
+
+# 访问示例: 127.0.0.1:5000/normalization/checkType/datagovernance/testdata/data,address,name
+
+
+@conformity.route('/checkLength/<db>/<tb>/<fd>/<inputLength>/<compType>',methods=['GET','POST'])
+def checkLength(db,tb,fd,inputLength,compType):
+    """
+    校验数据长度
+    :param db: 校验数据库
+    :param tb: 校验数据表
+    :param fd: 校验列
+    :param inputLength: 输入的期望长度
+    :param compType: 比较类型（>,<,=,<=,>=）
     :return:
+    """
+    # 从连接池获取数据库连接
+    db_pool = dbConnect.get_db_pool(False)
+    conn = db_pool.connection()
+    sql = "SELECT "+fd+" FROM "+db+"."+tb
+    columnInfo = pd.read_sql(sql, conn)
+    # 返回每一条记录的字符串的长度，效率比for循环更高,可以加条件过滤、统计长度不符合要求的字符串数据
+    strInfo = columnInfo[fd].str
+    lengthInfo = columnInfo[fd].str.len()
+    if compType == "morethan":
+        resRatio = lengthInfo[lengthInfo>int(inputLength)].shape[0]/lengthInfo.shape[0]
+    elif compType == "lessthan":
+        resRatio = lengthInfo[lengthInfo < int(inputLength)].shape[0] / lengthInfo.shape[0]
+    elif compType == "equal":
+        resRatio = lengthInfo[lengthInfo == int(inputLength)].shape[0] / lengthInfo.shape[0]
+
+    return jsonify({"maxlengeth":max(lengthInfo),"minlengeth":min(lengthInfo),"accordRatio":resRatio})
+
+# 访问示例：127.0.0.1:5000/normalization/checkLength/datagovernance/testdata/address/5/equal
+
+
+@conformity.route('/checkPri/<database>/<table>/<field>',methods=['GET','POST'])
+def checkPri(database,table,field):
+    """
+    单字段主键校验
+    :param database: 校验数据库名称
+    :param table: 校验数据表
+    :param field: 校验列
+    :return: 返回主键校验结果
+    """
+    # 读取数据库开始时间
+    start_read = time.clock()
+
+    # 从连接池获取数据库连接
+    print("获取数据库连接")
+    db_pool = dbConnect.get_db_pool(False)
+    conn = db_pool.connection()
+
+    db = database
+    tb = table
+    fd = field
+    sql = "DESC "+db+"."+tb
+    # print(sql)
+    columnInfo = pd.read_sql(sql, conn)
+
+    end_read = time.clock()
+    print("单字段主键校验读取数据库时间: %s Seconds" % (end_read - start_read))
+
+    # 获取某个字段的数据主键信息
+    isPri, = columnInfo['Key'][columnInfo['Field'] == fd].values
+    # print(isPri)
+    if isPri == 'PRI':
+
+        end_exec = time.clock()
+        print("单字段主键校验总用时: %s Seconds" % (end_exec - start_read))
+
+        return jsonify({fd:isPri})
+    else:
+        return jsonify({fd:"NOT PRI"})
+
+
+@conformity.route('/checkUnionPri/<database>/<table>/<field>',methods=['GET','POST'])
+def checkUnionPri(database,table,field):
+    """
+    联合主键校验
+    :param database: 校验数据库
+    :param table: 校验数据表
+    :param field: 校验列
+    :return: 返回联合主键校验结果
+    """
+    # 从连接池获取数据库连接
+    db_pool = dbConnect.get_db_pool(False)
+    conn = db_pool.connection()
+    db = database
+    tb = table
+    fd = field
+    sql = "DESC "+db+"."+tb
+    columnInfo = pd.read_sql(sql, conn)
+    # 获取检验列联合主键信息
+    uPriInfo = columnInfo[['Field','Type']][columnInfo['Key']=='PRI']
+    uPriList = list(uPriInfo['Field'])
+    # 是否需要返回联合主键列表
+    if fd in uPriList and len(uPriList)>1:
+        return jsonify({fd:"unionPri"})
+    else:
+        return jsonify({fd:"NOT unionPri"})
+
+@conformity.route('/checkFormat/<typeFormat>/<database>/<table>/<field>',methods = ['GET','POST'])
+def checkFormat(typeFormat,database,table,field):
+    """
+    邮箱、手机号码、身份证格式校验
+    :param typeFormat: 校验类型
+    :param database: 校验数据库
+    :param table: 校验数据表
+    :param field: 校验列
+    :return: 
     """
     # 从连接池获取数据库连接
     db_pool = dbConnect.get_db_pool(False)
@@ -126,46 +174,43 @@ def checkSingleDefaultValue(database,table,field):
     db = database
     tb = table
     fd = field
-    sql = "DESC "+db+"."+tb
-    dfData = pd.read_sql(sql, conn)
+    sql = "SELECT "+fd+" from "+db+"."+tb
+    dfData = pd.read_sql(sql, conn, chunksize=20000)
 
     end_read = time.clock()
-    print("一个字段默认值使用的一致性校验读取数据库时间: %s Seconds" % (end_read - start_read))
+    print("邮箱校验读取数据库时间: %s Seconds" % (end_read - start_read))
 
-    defaultDataListDict = dict(zip(list(dfData['Field']),list(dfData['Default'])))
-    defaultValue = defaultDataListDict[fd]
 
-    end_exec = time.clock()
-    print("默认值一致性校验总用时: %s Seconds" % (end_exec - start_read))
-    return  jsonify({fd:defaultValue})
+    email_num = phone_num = card_num = 0
+    # 检验该列所有数据的格式
+    if typeFormat == 'email':
+        for df in dfData:
+            for data in df[fd]:
+                if email(data):
+                    email_num = email_num+1
+        end_exec = time.clock()
+        print("邮箱校验总用时: %s Seconds" % (end_exec - start_read))
+        return jsonify({fd + " format correct num":int(email_num)})
+    elif typeFormat == 'phone':
+        for df in dfData:
+            for data in df[fd]:
+                if checkPhone(str(data)):
+                    phone_num = phone_num + 1
 
-# 访问示例127.0.0.1:5000/conformity/checkSingleDefaultValue/datagovernance/mytable/ff
-
-@conformity.route('/checkDefaultValue/<database>/<table>/<field>',methods = ['GET','POST'])
-def checkDefaultValue(database,table,field):
-    """
-    评估列属性和数据在相同数据类型的字段默认值上的一致性
-    :param database: 校验数据库
-    :param table: 校验表
-    :param field: 校验列
-    :return: 返回数据库下所有表的相同数据类型的字段默认值是否一致
-    """
-    # 从连接池获取数据库连接
-    db_pool = dbConnect.get_db_pool(False)
-    conn = db_pool.connection()
-    db = database
-    tb = table
-    fd = field
-    sql = "select table_name from information_schema.tables WHERE table_schema = "+"'"+db+"'"
-    # 返回指定数据库下所有表名
-    dfData = pd.read_sql(sql, conn)
-    allTableDefaultValue = {}
-    for i in list(dfData['table_name']):
-        sql = "DESC "+db+"."+i
-        tbData = pd.read_sql(sql, conn)
-        # 完全重复的类型与默认值组合会被合并
-        print(dict(zip(list(tbData['Type']),tbData['Default'])))
-        allTableDefaultValue.setdefault(i, []).append(dict(zip(list(tbData['Type']),tbData['Default'])))
-    return jsonify(allTableDefaultValue)
-
-# 访问示例：127.0.0.1:5000/conformity/checkDefaultValue/datagovernance/mytable/ff
+        end_exec = time.clock()
+        print("电话校验总用时: %s Seconds" % (end_exec - start_read))
+        return jsonify({fd + " format correct num": int(phone_num)})
+    elif typeFormat == 'idCard':
+        for df in dfData:
+            for data in df[fd]:
+                # checkRes = checkIdcard(data)
+                # if checkRes != '':
+                #     print(checkRes)
+                if data is not None:
+                    if checkIdcard(str(data)) == True:
+                        card_num = card_num + 1
+        end_exec = time.clock()
+        print("身份证校验总用时: %s Seconds" % (end_exec - start_read))
+        return jsonify({fd + "format correct num": int(card_num)})
+# 访问示例:127.0.0.1:5000/normalization/checkFormat/idCard/datagovernance/testdata/idcard
+# 127.0.0.1:5000/normalization/checkFormat/email/datagovernance/fakedata/emailinfo

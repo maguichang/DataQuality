@@ -27,7 +27,7 @@ from datetime import datetime
 import pandas as pd
 from validators import between,length,email
 from flask import Blueprint,jsonify,request
-from DQApp.dbPool import dbConnect
+from dbPool import dbConnect
 
 accuracy=Blueprint('accuracy',__name__)
 

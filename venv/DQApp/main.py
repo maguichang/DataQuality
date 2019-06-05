@@ -4,11 +4,11 @@
 
 from flask import Flask
 from completeness.rules import *
-from DQApp.accuracy.rules import *
-from DQApp.uniqueness.rules import *
-from DQApp.conformity.rules import *
-from DQApp.timeliness.rules import *
-from DQApp.normalization.rules import *
+from accuracy.rules import *
+from uniqueness.rules import *
+from conformity.rules import *
+from timeliness.rules import *
+from consistency.rules import *
 # 多进程模块
 from multiprocessing import Pool
 # 多线程模块
@@ -23,11 +23,12 @@ app.register_blueprint(accuracy,url_prefix='/accuracy')
 app.register_blueprint(uniqueness,url_prefix='/uniqueness')
 app.register_blueprint(conformity,url_prefix='/conformity')
 app.register_blueprint(timeliness,url_prefix='/timeliness')
-app.register_blueprint(normalization,url_prefix='/normalization')
+app.register_blueprint(consistency,url_prefix='/consistency')
 
 
 if __name__=='__main__':
 
   WSGIServer(('0.0.0.0',5000),app).serve_forever()
+  # app.run(host = '0.0.0.0',port = 5000)
   # app.run(threaded = True)
 
