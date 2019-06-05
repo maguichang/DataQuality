@@ -16,6 +16,7 @@ status: finished
     判断给定的字段是否在参考的数据表中
 """
 import pymysql
+import requests
 import numpy as np
 import pandas as pd
 import time
